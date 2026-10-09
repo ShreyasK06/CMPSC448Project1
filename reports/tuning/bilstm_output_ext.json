@@ -1,0 +1,146 @@
+{
+ "model": "bilstm",
+ "variant": "output",
+ "selection": "VAL only, test never touched. Stage 1: whole grid, seed 0. Stage 2: top-3 configs by stage-1 val macro-F1 re-run with seeds 0,1,2 (seed 0 reused from stage 1); best = highest mean val macro-F1.",
+ "with_emb_dropout": false,
+ "stage1": [
+  {
+   "params": {
+    "dropout": 0.3,
+    "hid": 256,
+    "emb": 128,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.64375,
+   "val_macro_f1": 0.6453620553915749,
+   "best_epoch": 5,
+   "n_params": 4635653,
+   "train_time_s": 69.90988612174988
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "hid": 256,
+    "emb": 128,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.6358333333333334,
+   "val_macro_f1": 0.6351275982210192,
+   "best_epoch": 6,
+   "n_params": 4635653,
+   "train_time_s": 78.43243885040283
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 256,
+    "emb": 128,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.63875,
+   "val_macro_f1": 0.6358252570043097,
+   "best_epoch": 5,
+   "n_params": 4635653,
+   "train_time_s": 67.2033429145813
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 256,
+    "emb": 128,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.665,
+   "val_macro_f1": 0.6640907707900338,
+   "best_epoch": 13,
+   "n_params": 4635653,
+   "train_time_s": 137.09781861305237
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 384,
+    "emb": 128,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.6491666666666667,
+   "val_macro_f1": 0.6446830110567079,
+   "best_epoch": 5,
+   "n_params": 5426693,
+   "train_time_s": 83.62459397315979
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 384,
+    "emb": 128,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.6654166666666667,
+   "val_macro_f1": 0.660182123487411,
+   "best_epoch": 11,
+   "n_params": 5426693,
+   "train_time_s": 145.08589124679565
+  }
+ ],
+ "stage2": [
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 256,
+    "emb": 128,
+    "weight_decay": 0.0001
+   },
+   "val_macro_f1_by_seed": {
+    "0": 0.6640907707900338,
+    "1": 0.6602929938028818,
+    "2": 0.6479410785128991
+   },
+   "val_macro_f1_mean": 0.6574416143686048,
+   "val_macro_f1_std": 0.00844398683503231,
+   "val_acc_mean": 0.6616666666666667
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 384,
+    "emb": 128,
+    "weight_decay": 0.0001
+   },
+   "val_macro_f1_by_seed": {
+    "0": 0.660182123487411,
+    "1": 0.6537507003073599,
+    "2": 0.6735754491235497
+   },
+   "val_macro_f1_mean": 0.6625027576394402,
+   "val_macro_f1_std": 0.010114058214036927,
+   "val_acc_mean": 0.6652777777777777
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "hid": 256,
+    "emb": 128,
+    "weight_decay": 0.0
+   },
+   "val_macro_f1_by_seed": {
+    "0": 0.6453620553915749,
+    "1": 0.6570768208479564,
+    "2": 0.6267163058751845
+   },
+   "val_macro_f1_mean": 0.6430517273715718,
+   "val_macro_f1_std": 0.0153115456118246,
+   "val_acc_mean": 0.6422222222222222
+  }
+ ],
+ "best": {
+  "params": {
+   "dropout": 0.5,
+   "hid": 384,
+   "emb": 128,
+   "weight_decay": 0.0001
+  },
+  "val_macro_f1_mean": 0.6625027576394402,
+  "val_macro_f1_std": 0.010114058214036927
+ }
+}

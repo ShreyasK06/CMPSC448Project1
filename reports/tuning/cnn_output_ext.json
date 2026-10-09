@@ -1,0 +1,224 @@
+{
+ "model": "cnn",
+ "variant": "output",
+ "selection": "VAL only, test never touched. Stage 1: whole grid, seed 0. Stage 2: top-3 configs by stage-1 val macro-F1 re-run with seeds 0,1,2 (seed 0 reused from stage 1); best = highest mean val macro-F1.",
+ "with_emb_dropout": false,
+ "stage1": [
+  {
+   "params": {
+    "dropout": 0.1,
+    "nf": 200,
+    "emb": 256,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.6895833333333333,
+   "val_macro_f1": 0.6862830930490649,
+   "best_epoch": 9,
+   "n_params": 8298005,
+   "train_time_s": 24.880149602890015
+  },
+  {
+   "params": {
+    "dropout": 0.1,
+    "nf": 200,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.6941666666666667,
+   "val_macro_f1": 0.6876628820258934,
+   "best_epoch": 5,
+   "n_params": 8298005,
+   "train_time_s": 16.980331659317017
+  },
+  {
+   "params": {
+    "dropout": 0.1,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.6929166666666666,
+   "val_macro_f1": 0.6957306817320328,
+   "best_epoch": 6,
+   "n_params": 8607005,
+   "train_time_s": 21.429190397262573
+  },
+  {
+   "params": {
+    "dropout": 0.1,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.7133333333333334,
+   "val_macro_f1": 0.7079887185961964,
+   "best_epoch": 9,
+   "n_params": 8607005,
+   "train_time_s": 29.13683533668518
+  },
+  {
+   "params": {
+    "dropout": 0.2,
+    "nf": 200,
+    "emb": 256,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.6854166666666667,
+   "val_macro_f1": 0.6846089601071393,
+   "best_epoch": 5,
+   "n_params": 8298005,
+   "train_time_s": 15.903086423873901
+  },
+  {
+   "params": {
+    "dropout": 0.2,
+    "nf": 200,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.7058333333333333,
+   "val_macro_f1": 0.696891621535654,
+   "best_epoch": 16,
+   "n_params": 8298005,
+   "train_time_s": 39.32799768447876
+  },
+  {
+   "params": {
+    "dropout": 0.2,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.6904166666666667,
+   "val_macro_f1": 0.6899048457044411,
+   "best_epoch": 5,
+   "n_params": 8607005,
+   "train_time_s": 19.73284339904785
+  },
+  {
+   "params": {
+    "dropout": 0.2,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.66875,
+   "val_macro_f1": 0.6749239502128004,
+   "best_epoch": 5,
+   "n_params": 8607005,
+   "train_time_s": 19.425548791885376
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 200,
+    "emb": 256,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.6741666666666667,
+   "val_macro_f1": 0.6719437803324724,
+   "best_epoch": 6,
+   "n_params": 8298005,
+   "train_time_s": 17.919273138046265
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 200,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.6929166666666666,
+   "val_macro_f1": 0.6891447213053025,
+   "best_epoch": 13,
+   "n_params": 8298005,
+   "train_time_s": 32.57191276550293
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0
+   },
+   "val_acc": 0.68,
+   "val_macro_f1": 0.6826570683049985,
+   "best_epoch": 5,
+   "n_params": 8607005,
+   "train_time_s": 19.051998615264893
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_acc": 0.7058333333333333,
+   "val_macro_f1": 0.7037939308357573,
+   "best_epoch": 12,
+   "n_params": 8607005,
+   "train_time_s": 37.34687805175781
+  }
+ ],
+ "stage2": [
+  {
+   "params": {
+    "dropout": 0.1,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_macro_f1_by_seed": {
+    "0": 0.7079887185961964,
+    "1": 0.6897775783843896,
+    "2": 0.7036755021054231
+   },
+   "val_macro_f1_mean": 0.7004805996953364,
+   "val_macro_f1_std": 0.009516667379445664,
+   "val_acc_mean": 0.7019444444444445
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 300,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_macro_f1_by_seed": {
+    "0": 0.7037939308357573,
+    "1": 0.6917002817788462,
+    "2": 0.6635512295846121
+   },
+   "val_macro_f1_mean": 0.6863484807330719,
+   "val_macro_f1_std": 0.02064824645877692,
+   "val_acc_mean": 0.6913888888888889
+  },
+  {
+   "params": {
+    "dropout": 0.2,
+    "nf": 200,
+    "emb": 256,
+    "weight_decay": 0.0001
+   },
+   "val_macro_f1_by_seed": {
+    "0": 0.696891621535654,
+    "1": 0.6989866283303601,
+    "2": 0.7040862951958748
+   },
+   "val_macro_f1_mean": 0.6999881816872963,
+   "val_macro_f1_std": 0.0037004275583183135,
+   "val_acc_mean": 0.7040277777777778
+  }
+ ],
+ "best": {
+  "params": {
+   "dropout": 0.1,
+   "nf": 300,
+   "emb": 256,
+   "weight_decay": 0.0001
+  },
+  "val_macro_f1_mean": 0.7004805996953364,
+  "val_macro_f1_std": 0.009516667379445664
+ }
+}
