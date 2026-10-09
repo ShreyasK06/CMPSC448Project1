@@ -55,6 +55,8 @@ git push origin HEAD            # or copy reports/ and runs/ back with scp / a z
 Key files: `reports/results.md` (aggregate table), `reports/tuning/*.json`, `reports/baselines/*.json`,
 `runs/*.json` (per-seed metrics) and `runs/*.npz` (test predictions).
 
+> Next round of GPU work (output-length follow-up, T12/T13): see [GPU_PHASE3.md](GPU_PHASE3.md).
+
 ## Phase 2 on the GPU machine
 
 Phase 2 adds three studies on top of the finished `run_gpu.py` run. It reuses the tuned base configs in
