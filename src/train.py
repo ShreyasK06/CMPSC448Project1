@@ -4,7 +4,6 @@ python -m src.train --model cnn --variant output --seeds 0 1 2 [--eval-test] [--
 from __future__ import annotations
 
 import argparse
-import copy
 import json
 import pickle
 import random
@@ -27,7 +26,7 @@ DEFAULTS = dict(
     lowercase=False, max_epochs=20, patience=3, data="data/processed/raid_main.parquet",
     rq3=False, eval_test=False, tag="base", batch_size=64, lr=1e-3, weight_decay=1e-5,
     clip=1.0, cache_dir="data/processed/cache", runs_dir="runs", ckpt_dir=None,
-    save_preds=True, verbose=True, threads=8,
+    save_preds=True, verbose=True, threads=8, device="auto",
 )
 
 
@@ -35,6 +34,18 @@ def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def resolve_device(name="auto"):
+    """'auto' -> cuda if available else cpu; otherwise torch.device(name)."""
+    if name in (None, "auto"):
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    d = torch.device(name)
+    if d.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(f"--device {name} requested but CUDA is not available")
+    return d
 
 
 def _test_names(rq3):
@@ -81,16 +92,18 @@ def get_data(cfg):
 
 
 @torch.no_grad()
-def evaluate(model, loader, loss_fn=None):
+def evaluate(model, loader, loss_fn=None, device=None):
+    device = device or torch.device("cpu")
     model.eval()
     ys, ps, probs, tot, n = [], [], [], 0.0, 0
     for x, l, y in loader:
-        lo = model(x, l)
+        y_d = y.to(device, non_blocking=True)
+        lo = model(x.to(device, non_blocking=True), l)  # lengths stay on CPU
         if loss_fn is not None:
-            tot += loss_fn(lo, y).item() * len(y)
+            tot += loss_fn(lo, y_d).item() * len(y)
         n += len(y)
-        probs.append(torch.softmax(lo, 1).numpy())
-        ps.append(lo.argmax(1).numpy())
+        probs.append(torch.softmax(lo, 1).cpu().numpy())
+        ps.append(lo.argmax(1).cpu().numpy())
         ys.append(y.numpy())
     return np.concatenate(ys), np.concatenate(ps), np.concatenate(probs), tot / max(n, 1)
 
@@ -106,18 +119,23 @@ def metrics(y, p, domains):
 
 def run(config):
     cfg = {**DEFAULTS, **config}
-    torch.set_num_threads(cfg["threads"])
+    device = resolve_device(cfg["device"])
+    if device.type == "cpu":
+        torch.set_num_threads(cfg["threads"])
+    pin = device.type == "cuda"
     set_seed(cfg["seed"])
     vocab, ds, domains = get_data(cfg)
     g = torch.Generator()
     g.manual_seed(cfg["seed"])
-    train_dl = DataLoader(ds["train"], cfg["batch_size"], shuffle=True, collate_fn=collate_fn, generator=g)
+    train_dl = DataLoader(ds["train"], cfg["batch_size"], shuffle=True, collate_fn=collate_fn, generator=g,
+                          num_workers=0, pin_memory=pin)
 
     def mk(d):
-        return DataLoader(d, 256, shuffle=False, collate_fn=collate_fn)
+        return DataLoader(d, 256, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=pin)
 
     val_dl = mk(ds["val"])
-    model = build_model(cfg["model"], len(vocab), N_CLASSES, cfg["emb"], cfg["hid"], cfg["nf"], cfg["dropout"])
+    model = build_model(cfg["model"], len(vocab), N_CLASSES, cfg["emb"], cfg["hid"], cfg["nf"], cfg["dropout"],
+                        packed=device.type == "cuda").to(device)
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.Adam(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
     loss_fn = nn.CrossEntropyLoss()
@@ -128,6 +146,7 @@ def run(config):
         model.train()
         tot, n = 0.0, 0
         for x, l, y in train_dl:
+            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             opt.zero_grad()
             loss = loss_fn(model(x, l), y)
             loss.backward()
@@ -135,7 +154,7 @@ def run(config):
             opt.step()
             tot += loss.item() * len(y)
             n += len(y)
-        y, p, _, vl = evaluate(model, val_dl, loss_fn)
+        y, p, _, vl = evaluate(model, val_dl, loss_fn, device)
         m = metrics(y, p, domains["val"])
         hist["train_loss"].append(tot / n)
         hist["val_loss"].append(vl)
@@ -146,16 +165,16 @@ def run(config):
                   f"val_acc={m['acc']:.4f} val_f1={m['macro_f1']:.4f}", flush=True)
         if m["macro_f1"] > best_f1:
             best_f1, best_ep, bad = m["macro_f1"], ep, 0
-            best_state = copy.deepcopy(model.state_dict())
+            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
         else:
             bad += 1
             if bad >= cfg["patience"]:
                 break
     train_time = time.time() - t0
     model.load_state_dict(best_state)
-    y, p, _, _ = evaluate(model, val_dl)
+    y, p, _, _ = evaluate(model, val_dl, device=device)
     vm = metrics(y, p, domains["val"])
-    res = dict(config=dict(cfg), vocab_size=len(vocab), n_params=n_params, train_time_s=train_time,
+    res = dict(config={**cfg, "device": str(device)}, vocab_size=len(vocab), n_params=n_params, train_time_s=train_time,
                epochs_run=len(hist["train_loss"]), **hist, best_epoch=best_ep + 1,
                val_acc=vm["acc"], val_macro_f1=vm["macro_f1"], val_confusion=vm["confusion"],
                val_domain_acc=vm["domain_acc"])
@@ -163,7 +182,7 @@ def run(config):
     if cfg["eval_test"]:
         res["test"] = {}
         for name in _test_names(cfg["rq3"]):
-            y, p, pr, _ = evaluate(model, mk(ds[name]))
+            y, p, pr, _ = evaluate(model, mk(ds[name]), device=device)
             res["test"][name] = metrics(y, p, domains[name])
             preds[f"{name}_y"], preds[f"{name}_pred"], preds[f"{name}_prob"] = y, p, pr
             preds[f"{name}_source_id"] = np.array(ds[name].source_ids)
@@ -202,14 +221,15 @@ def main(argv=None):
     ap.add_argument("--data", default=None)
     ap.add_argument("--runs-dir", default="runs")
     ap.add_argument("--save-ckpt", action="store_true")
-    ap.add_argument("--threads", type=int, default=8)
+    ap.add_argument("--threads", type=int, default=8, help="CPU threads (ignored on CUDA)")
+    ap.add_argument("--device", default="auto", help="auto (cuda if available else cpu), cpu, cuda, cuda:1")
     a = ap.parse_args(argv)
     data = a.data or ("data/processed/raid_rq3.parquet" if a.rq3 else "data/processed/raid_main.parquet")
     for s in a.seeds:
         cfg = dict(model=a.model, variant=a.variant, seed=s, emb=a.emb, hid=a.hid, nf=a.nf, dropout=a.dropout,
                    lowercase=a.lowercase, max_epochs=a.max_epochs, patience=a.patience, data=data, rq3=a.rq3,
                    eval_test=a.eval_test, tag=a.tag, runs_dir=a.runs_dir,
-                   ckpt_dir="checkpoints" if a.save_ckpt else None, threads=a.threads)
+                   ckpt_dir="checkpoints" if a.save_ckpt else None, threads=a.threads, device=a.device)
         r = run(cfg)
         msg = f"seed {s}: best_ep={r['best_epoch']} val_acc={r['val_acc']:.4f} val_f1={r['val_macro_f1']:.4f}"
         for n, t in r.get("test", {}).items():

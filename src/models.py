@@ -54,7 +54,7 @@ class BiLSTM(nn.Module):
 
 
 class BiLSTMPacked(nn.Module):
-    """Reference implementation using pack_padded_sequence (slow on CPU)."""
+    """Standard packed bidirectional nn.LSTM (the original spec). Slow on CPU, used on CUDA."""
 
     def __init__(self, vocab, n_classes, emb=128, hid=128, p=0.5):
         super().__init__()
@@ -86,9 +86,12 @@ def copy_packed_to_fast(packed, fast):
     return fast
 
 
-def build_model(name, vocab_size, n_classes=5, emb=128, hid=128, nf=100, dropout=0.5):
+def build_model(name, vocab_size, n_classes=5, emb=128, hid=128, nf=100, dropout=0.5, packed=False):
+    """packed=True selects the standard packed bidirectional nn.LSTM (use on CUDA); the default
+    two-LSTM variant is faster on CPU. Both are numerically equivalent (see tests)."""
     if name == "cnn":
         return TextCNN(vocab_size, n_classes, emb=emb, nf=nf, p=dropout)
     if name == "bilstm":
-        return BiLSTM(vocab_size, n_classes, emb=emb, hid=hid, p=dropout)
+        cls = BiLSTMPacked if packed else BiLSTM
+        return cls(vocab_size, n_classes, emb=emb, hid=hid, p=dropout)
     raise ValueError(f"unknown model {name!r}")

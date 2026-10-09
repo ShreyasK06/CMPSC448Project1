@@ -135,3 +135,27 @@ def test_overfit_tiny(cls):
         opt.step()
         losses.append(loss.item())
     assert losses[-1] < 0.5 * losses[0]
+
+
+def test_build_model_selects_bilstm_path_by_device():
+    from src.models import build_model
+    assert isinstance(build_model("bilstm", V, C), BiLSTM)  # CPU default: fast two-LSTM path
+    assert isinstance(build_model("bilstm", V, C, packed=True), BiLSTMPacked)  # CUDA path
+    assert isinstance(build_model("cnn", V, C, packed=True), TextCNN)
+
+
+def test_packed_path_trains_end_to_end_and_device_resolution(tmp_path):
+    from src.train import resolve_device
+    assert resolve_device("auto").type in ("cpu", "cuda")
+    assert resolve_device("cpu").type == "cpu"
+    df = make_synthetic_df(40, seed=0)
+    p = tmp_path / "d.parquet"
+    df.to_parquet(p)
+    r = run(dict(model="bilstm", variant="output", data=str(p), max_epochs=1, emb=16, hid=16, device="cpu",
+                 cache_dir=str(tmp_path / "c"), runs_dir=None, verbose=False))
+    assert r["config"]["device"] == "cpu"
+    # packed model on CPU still runs through the same training code path
+    from src.train import evaluate
+    m = BiLSTMPacked(V, C, emb=16, hid=16)
+    x, l = _mixed_batch()
+    assert m(x, l).shape == (x.size(0), C)

@@ -25,6 +25,8 @@ def main(argv=None):
     ap.add_argument("--data", default="data/processed/raid_main.parquet")
     ap.add_argument("--lowercase", action="store_true")
     ap.add_argument("--out-dir", default="reports/tuning")
+    ap.add_argument("--device", default="auto")
+    ap.add_argument("--threads", type=int, default=8)
     a = ap.parse_args(argv)
     grid = GRIDS[a.model]
     keys = list(grid)
@@ -34,7 +36,8 @@ def main(argv=None):
     results = []
     for c in combos:
         r = run(dict(model=a.model, variant=a.variant, seed=0, eval_test=False, rq3=False, data=a.data,
-                     lowercase=a.lowercase, max_epochs=a.max_epochs, runs_dir=None, verbose=False, **c))
+                     lowercase=a.lowercase, max_epochs=a.max_epochs, runs_dir=None, verbose=False,
+                     device=a.device, threads=a.threads, **c))
         results.append(dict(params=c, val_acc=r["val_acc"], val_macro_f1=r["val_macro_f1"],
                             best_epoch=r["best_epoch"], n_params=r["n_params"], train_time_s=r["train_time_s"]))
         print(f"{c} -> val_f1={r['val_macro_f1']:.4f} val_acc={r['val_acc']:.4f}", flush=True)

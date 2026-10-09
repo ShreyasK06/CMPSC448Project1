@@ -22,7 +22,7 @@ from sklearn.pipeline import FeatureUnion
 from src.preprocess import tokenize
 
 VARIANTS = ("prompt", "output", "both")
-C_GRID = (0.01, 0.1, 1, 10, 100)
+C_GRID = (0.01, 0.1, 1, 10, 100, 1000)  # 1000 added: best C=100 sat at the old grid edge
 LABEL_NAMES = ["chatgpt", "cohere-chat", "llama-chat", "mistral-chat", "mpt-chat"]
 SEED = 42
 

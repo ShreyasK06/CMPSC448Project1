@@ -30,7 +30,7 @@ def test_runs_all_variants_no_test(parquet, tmp_path):
     for tag, r in res.items():
         assert abs(r["majority"]["val"]["accuracy"] - 0.2) < 1e-9  # balanced -> 0.2
         assert "test" not in r["tfidf_lr"] and "test" not in r["majority"]
-        assert set(r["val_curve"]) == {"0.01", "0.1", "1", "10", "100"}
+        assert set(r["val_curve"]) == {"0.01", "0.1", "1", "10", "100", "1000"}
         assert len(r["tfidf_lr"]["val"]["confusion_matrix"]) == 5
         assert r["tfidf_lr"]["val"]["per_domain_accuracy"]
         assert len(r["top_features"]) == 5

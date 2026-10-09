@@ -53,6 +53,19 @@ def _norm(rec, src):
                 seed=cfg.get("seed", 0), src=src, metrics={k: v for k, v in m.items() if v is not None})
 
 
+def _expand_baseline(rec):
+    """src.baselines result JSON ({'variant','char','rq3','majority','tfidf_lr'}) -> flat records."""
+    if "tfidf_lr" not in rec:
+        return [rec]
+    tag = "rq3" if rec.get("rq3") else "base"
+    out = []
+    for name, part in (("majority", rec.get("majority", {})),
+                       ("tfidf_lr" + ("+char" if rec.get("char") else ""), rec["tfidf_lr"])):
+        out.append(dict(model=name, variant=rec.get("variant"), tag=tag, seed=0,
+                        val=part.get("val"), test=part.get("test")))
+    return out
+
+
 def load(runs, baselines):
     recs = []
     for src, d in (("neural", runs), ("baseline", baselines)):
@@ -62,7 +75,10 @@ def load(runs, baselines):
             except Exception as e:
                 print(f"skip {f}: {e}", file=sys.stderr)
                 continue
-            for rec in (data if isinstance(data, list) else [data]):
+            recs_in = data if isinstance(data, list) else [data]
+            if src == "baseline":
+                recs_in = [r2 for r in recs_in if isinstance(r, dict) for r2 in _expand_baseline(r)]
+            for rec in recs_in:
                 n = _norm(rec, src) if isinstance(rec, dict) else None
                 if n is None or not n["metrics"]:
                     print(f"skip {f}: unrecognised format", file=sys.stderr)

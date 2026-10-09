@@ -3,12 +3,13 @@ __pycache__/
 *.pyc
 data/raw/
 data/interim/
-data/processed/*.parquet
+# processed parquet + vocab.json ship with the repo; only the cache is ignored
 data/processed/cache/
 checkpoints/
-runs/
 .claude-flow/
 *.pt
 .pytest_cache/
 logs/
+quick_out/
+quick_out/
 
