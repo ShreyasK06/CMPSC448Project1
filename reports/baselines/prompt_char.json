@@ -1,0 +1,576 @@
+{
+  "variant": "prompt",
+  "char": true,
+  "truncate": true,
+  "eval_test": true,
+  "n": {
+    "train": 11200,
+    "val": 2400,
+    "test": 2400
+  },
+  "n_features": 57314,
+  "best_C": 0.01,
+  "val_curve": {
+    "0.01": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    },
+    "0.1": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    },
+    "1": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    },
+    "10": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    },
+    "100": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    },
+    "1000": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    }
+  },
+  "majority": {
+    "label": 2,
+    "val": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    },
+    "test": {
+      "test": {
+        "accuracy": 0.2,
+        "macro_f1": 0.06666666666666667
+      }
+    }
+  },
+  "tfidf_lr": {
+    "train": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667
+    },
+    "val": {
+      "accuracy": 0.2,
+      "macro_f1": 0.06666666666666667,
+      "confusion_matrix": [
+        [
+          480,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          480,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          480,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          480,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          480,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "per_domain_accuracy": {
+        "abstracts": 0.2,
+        "books": 0.2,
+        "news": 0.2,
+        "poetry": 0.2,
+        "recipes": 0.2,
+        "reddit": 0.2,
+        "reviews": 0.2,
+        "wiki": 0.2
+      }
+    },
+    "test": {
+      "test": {
+        "accuracy": 0.2,
+        "macro_f1": 0.06666666666666667,
+        "confusion_matrix": [
+          [
+            480,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            480,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            480,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            480,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            480,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "per_domain_accuracy": {
+          "abstracts": 0.2,
+          "books": 0.2,
+          "news": 0.2,
+          "poetry": 0.2,
+          "recipes": 0.2,
+          "reddit": 0.2,
+          "reviews": 0.2,
+          "wiki": 0.2
+        }
+      }
+    }
+  },
+  "top_features": {
+    "chatgpt": [
+      [
+        "char__\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea\u91cc",
+        0.0
+      ],
+      [
+        "char__\ufe0f ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2\u6d6a",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5427",
+        0.0
+      ]
+    ],
+    "cohere-chat": [
+      [
+        "char__\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea\u91cc",
+        0.0
+      ],
+      [
+        "char__\ufe0f ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2\u6d6a",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5427",
+        0.0
+      ]
+    ],
+    "llama-chat": [
+      [
+        "char__\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea\u91cc",
+        0.0
+      ],
+      [
+        "char__\ufe0f ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2\u6d6a",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5427",
+        0.0
+      ]
+    ],
+    "mistral-chat": [
+      [
+        "char__\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea\u91cc",
+        0.0
+      ],
+      [
+        "char__\ufe0f ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2\u6d6a",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5427",
+        0.0
+      ]
+    ],
+    "mpt-chat": [
+      [
+        "char__\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u91cc\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u95ee\u4f60\u662f\u54ea\u91cc",
+        0.0
+      ],
+      [
+        "char__\ufe0f ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2",
+        0.0
+      ],
+      [
+        "char__\u795e\u5948\u5ddd\u51b2\u6d6a",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f",
+        0.0
+      ],
+      [
+        "char__\u8bf7\u95ee\u4f60\u662f\u54ea",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427",
+        0.0
+      ],
+      [
+        "char__\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4",
+        0.0
+      ],
+      [
+        "char__\u6d6a\u91cc\u5427\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u6ef4 ",
+        0.0
+      ],
+      [
+        "char__\u795e\u5427",
+        0.0
+      ]
+    ]
+  },
+  "seconds": 13.7,
+  "rq3": false
+}

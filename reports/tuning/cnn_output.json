@@ -1,0 +1,115 @@
+{
+ "model": "cnn",
+ "variant": "output",
+ "selection": "val macro-F1, seed 0, no test data used",
+ "results": [
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 100,
+    "emb": 128
+   },
+   "val_acc": 0.6625,
+   "val_macro_f1": 0.6605923001256867,
+   "best_epoch": 8,
+   "n_params": 3995405,
+   "train_time_s": 22.901477098464966
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 100,
+    "emb": 256
+   },
+   "val_acc": 0.6691666666666667,
+   "val_macro_f1": 0.6735505471292402,
+   "best_epoch": 9,
+   "n_params": 7989005,
+   "train_time_s": 26.67887020111084
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 200,
+    "emb": 128
+   },
+   "val_acc": 0.6829166666666666,
+   "val_macro_f1": 0.6767494595632159,
+   "best_epoch": 12,
+   "n_params": 4150805,
+   "train_time_s": 25.83131170272827
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "nf": 200,
+    "emb": 256
+   },
+   "val_acc": 0.6858333333333333,
+   "val_macro_f1": 0.6861523429834139,
+   "best_epoch": 12,
+   "n_params": 8298005,
+   "train_time_s": 33.33190584182739
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "nf": 100,
+    "emb": 128
+   },
+   "val_acc": 0.6420833333333333,
+   "val_macro_f1": 0.6433438850837007,
+   "best_epoch": 10,
+   "n_params": 3995405,
+   "train_time_s": 24.140411853790283
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "nf": 100,
+    "emb": 256
+   },
+   "val_acc": 0.6516666666666666,
+   "val_macro_f1": 0.6535455500524344,
+   "best_epoch": 14,
+   "n_params": 7989005,
+   "train_time_s": 35.296483755111694
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "nf": 200,
+    "emb": 128
+   },
+   "val_acc": 0.66375,
+   "val_macro_f1": 0.6653647092764798,
+   "best_epoch": 11,
+   "n_params": 4150805,
+   "train_time_s": 23.233927488327026
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "nf": 200,
+    "emb": 256
+   },
+   "val_acc": 0.6625,
+   "val_macro_f1": 0.6624891536388009,
+   "best_epoch": 8,
+   "n_params": 8298005,
+   "train_time_s": 22.633766889572144
+  }
+ ],
+ "best": {
+  "params": {
+   "dropout": 0.3,
+   "nf": 200,
+   "emb": 256
+  },
+  "val_acc": 0.6858333333333333,
+  "val_macro_f1": 0.6861523429834139,
+  "best_epoch": 12,
+  "n_params": 8298005,
+  "train_time_s": 33.33190584182739
+ }
+}

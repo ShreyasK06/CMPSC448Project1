@@ -1,0 +1,62 @@
+{
+ "model": "bilstm",
+ "variant": "output",
+ "selection": "val macro-F1, seed 0, no test data used",
+ "results": [
+  {
+   "params": {
+    "dropout": 0.3,
+    "hid": 128
+   },
+   "val_acc": 0.65,
+   "val_macro_f1": 0.6465036791456902,
+   "best_epoch": 9,
+   "n_params": 4106757,
+   "train_time_s": 90.73184251785278
+  },
+  {
+   "params": {
+    "dropout": 0.3,
+    "hid": 256
+   },
+   "val_acc": 0.6583333333333333,
+   "val_macro_f1": 0.6571317058491166,
+   "best_epoch": 6,
+   "n_params": 4635653,
+   "train_time_s": 79.05015468597412
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 128
+   },
+   "val_acc": 0.6333333333333333,
+   "val_macro_f1": 0.6378271675731065,
+   "best_epoch": 9,
+   "n_params": 4106757,
+   "train_time_s": 91.59288835525513
+  },
+  {
+   "params": {
+    "dropout": 0.5,
+    "hid": 256
+   },
+   "val_acc": 0.6591666666666667,
+   "val_macro_f1": 0.6579278401619609,
+   "best_epoch": 8,
+   "n_params": 4635653,
+   "train_time_s": 97.02517366409302
+  }
+ ],
+ "best": {
+  "params": {
+   "dropout": 0.5,
+   "hid": 256
+  },
+  "val_acc": 0.6591666666666667,
+  "val_macro_f1": 0.6579278401619609,
+  "best_epoch": 8,
+  "n_params": 4635653,
+  "train_time_s": 97.02517366409302
+ }
+}
