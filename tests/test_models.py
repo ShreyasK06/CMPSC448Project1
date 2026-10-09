@@ -1,5 +1,6 @@
 import pickle
 
+import numpy as np
 import pytest
 import torch
 from torch import nn
@@ -105,7 +106,9 @@ def test_train_run_smoke(tmp_path, model, variant):
                cache_dir=str(tmp_path / "cache"), runs_dir=str(tmp_path / "runs"), verbose=False)
     r = run(cfg)
     assert not any(k.startswith("test") for k in r), "test metrics present without eval_test"
-    assert not list((tmp_path / "runs").glob("*.npz"))
+    npz = list((tmp_path / "runs").glob("*.npz"))  # VAL predictions are always saved, TEST ones only with eval_test
+    assert len(npz) == 1 and {"val_y", "val_pred", "val_prob", "val_source_id"} <= set(np.load(npz[0]).files)
+    assert not any(k.startswith("test") for k in np.load(npz[0]).files)
     assert len(r["train_loss"]) == 2 and 1 <= r["best_epoch"] <= 2
     assert 0 <= r["val_macro_f1"] <= 1 and r["n_params"] > 0
     c = pickle.loads(next((tmp_path / "cache").glob("*.pkl")).read_bytes())

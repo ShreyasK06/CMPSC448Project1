@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader
 
 from src.models import build_model
 from src.preprocess import TextDataset, Vocab, build_vocab_from_df, collate_fn
+from src.scaling import subsample_ids
 
 N_CLASSES = 5
 DEFAULTS = dict(
@@ -27,6 +28,10 @@ DEFAULTS = dict(
     rq3=False, eval_test=False, tag="base", batch_size=64, lr=1e-3, weight_decay=1e-5,
     clip=1.0, cache_dir="data/processed/cache", runs_dir="runs", ckpt_dir=None,
     save_preds=True, verbose=True, threads=8, device="auto",
+    emb_dropout=0.0,      # dropout on the embedding output (0 = off, bit-identical to older runs)
+    max_out_len=256,      # output-token cap (prompt cap stays 64)
+    format_norm=False,    # format-normalise the generation (strip markdown, drop <NL>) before tokenising
+    data_fraction=1.0,    # nested seeded fraction of TRAIN source_ids (val/test never touched)
 )
 
 
@@ -61,6 +66,9 @@ def load_splits(cfg):
         g = df[df[col] == n].reset_index(drop=True)
         if n == "train":
             g = g.assign(split="train")  # vocab guard in build_vocab_from_df checks split == 'train'
+            if cfg.get("data_fraction", 1.0) < 1.0:
+                keep = set(subsample_ids(g["source_id"].unique(), cfg["data_fraction"]))
+                g = g[g["source_id"].astype(str).isin(keep)].reset_index(drop=True)
         out[n] = g
     return out
 
@@ -70,6 +78,13 @@ def _cache_path(cfg):
     st = p.stat()
     key = (f"{p.stem}_{'rq3' if cfg['rq3'] else 'main'}_{cfg['variant']}_"
            f"{'lc' if cfg['lowercase'] else 'cs'}_{st.st_size}_{int(st.st_mtime)}")
+    # non-default options extend the key (defaults keep the historical key, so old caches stay valid)
+    if cfg.get("max_out_len", 256) != 256:
+        key += f"_mo{cfg['max_out_len']}"
+    if cfg.get("format_norm"):
+        key += "_fn"
+    if cfg.get("data_fraction", 1.0) < 1.0:
+        key += f"_fr{cfg['data_fraction']:g}"
     return Path(cfg["cache_dir"]) / f"{key}.pkl"
 
 
@@ -83,8 +98,10 @@ def get_data(cfg):
         except Exception:
             pass
     splits = load_splits(cfg)  # all splits are encoded so the cache is reusable; test is only *used* if eval_test
-    vocab = build_vocab_from_df(splits["train"], cfg["lowercase"])
-    ds = {n: TextDataset(g, vocab, cfg["variant"], cfg["lowercase"]) for n, g in splits.items()}
+    fn = bool(cfg.get("format_norm"))
+    vocab = build_vocab_from_df(splits["train"], cfg["lowercase"], normalise=fn)
+    ds = {n: TextDataset(g, vocab, cfg["variant"], cfg["lowercase"], max_output=int(cfg.get("max_out_len", 256)),
+                         normalise=fn) for n, g in splits.items()}
     domains = {n: g["domain"].tolist() for n, g in splits.items()}
     cp.parent.mkdir(parents=True, exist_ok=True)
     cp.write_bytes(pickle.dumps(dict(itos=vocab.itos, ds=ds, domains=domains)))
@@ -135,7 +152,7 @@ def run(config):
 
     val_dl = mk(ds["val"])
     model = build_model(cfg["model"], len(vocab), N_CLASSES, cfg["emb"], cfg["hid"], cfg["nf"], cfg["dropout"],
-                        packed=device.type == "cuda").to(device)
+                        packed=device.type == "cuda", emb_dropout=cfg["emb_dropout"]).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.Adam(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
     loss_fn = nn.CrossEntropyLoss()
@@ -172,13 +189,14 @@ def run(config):
                 break
     train_time = time.time() - t0
     model.load_state_dict(best_state)
-    y, p, _, _ = evaluate(model, val_dl, device=device)
+    y, p, val_prob, _ = evaluate(model, val_dl, device=device)
     vm = metrics(y, p, domains["val"])
     res = dict(config={**cfg, "device": str(device)}, vocab_size=len(vocab), n_params=n_params, train_time_s=train_time,
                epochs_run=len(hist["train_loss"]), **hist, best_epoch=best_ep + 1,
                val_acc=vm["acc"], val_macro_f1=vm["macro_f1"], val_confusion=vm["confusion"],
                val_domain_acc=vm["domain_acc"])
-    preds = {}
+    # VAL predictions at the best-val checkpoint are always saved (lets a VAL-chosen ensemble weight be fit later)
+    preds = dict(val_y=y, val_pred=p, val_prob=val_prob, val_source_id=np.array(ds["val"].source_ids))
     if cfg["eval_test"]:
         res["test"] = {}
         for name in _test_names(cfg["rq3"]):
@@ -215,6 +233,13 @@ def main(argv=None):
     ap.add_argument("--hid", type=int, default=128)
     ap.add_argument("--nf", type=int, default=100)
     ap.add_argument("--dropout", type=float, default=0.5)
+    ap.add_argument("--weight-decay", type=float, default=DEFAULTS["weight_decay"])
+    ap.add_argument("--emb-dropout", type=float, default=0.0, help="dropout on embeddings (default 0 = off)")
+    ap.add_argument("--max-out-len", type=int, default=256, help="output-token cap (default 256; cache key includes it)")
+    ap.add_argument("--format-norm", action="store_true",
+                    help="format-normalise the generation (strip markdown/bullets, collapse whitespace, no <NL>)")
+    ap.add_argument("--data-fraction", type=float, default=1.0,
+                    help="nested seeded fraction of TRAIN source_ids (val/test unchanged)")
     ap.add_argument("--tag", default="base")
     ap.add_argument("--max-epochs", type=int, default=20)
     ap.add_argument("--patience", type=int, default=3)
@@ -229,7 +254,9 @@ def main(argv=None):
         cfg = dict(model=a.model, variant=a.variant, seed=s, emb=a.emb, hid=a.hid, nf=a.nf, dropout=a.dropout,
                    lowercase=a.lowercase, max_epochs=a.max_epochs, patience=a.patience, data=data, rq3=a.rq3,
                    eval_test=a.eval_test, tag=a.tag, runs_dir=a.runs_dir,
-                   ckpt_dir="checkpoints" if a.save_ckpt else None, threads=a.threads, device=a.device)
+                   ckpt_dir="checkpoints" if a.save_ckpt else None, threads=a.threads, device=a.device,
+                   weight_decay=a.weight_decay, emb_dropout=a.emb_dropout, max_out_len=a.max_out_len,
+                   format_norm=a.format_norm, data_fraction=a.data_fraction)
         r = run(cfg)
         msg = f"seed {s}: best_ep={r['best_epoch']} val_acc={r['val_acc']:.4f} val_f1={r['val_macro_f1']:.4f}"
         for n, t in r.get("test", {}).items():

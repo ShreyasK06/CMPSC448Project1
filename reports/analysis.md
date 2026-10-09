@@ -417,3 +417,18 @@ the same collapse (93.8% cohere), so the length/format shift alone sends code to
 reaches 49.40 +/- 2.27 accuracy (grouped 5-fold, 400 ids; chance 20, text CV 76.24 +/- 0.56) using only 320 training ids per fold. So the text-to-code
 failure is mainly domain shift (a classifier with the right in-domain data gets ~2.5x chance); but code is also intrinsically less
 attributable than text (short, near-identical solutions across models), and the ceiling is a lower bound for what a better code model might reach.
+
+## Secondary: learning curve (beyond spec)
+
+**Secondary / beyond the project spec.** Does more training data help? Train subsets are nested seeded subsamples (seed 42) of the 2,240 train source_ids of `raid_main`; `expanded` = `data/processed/raid_scaled.parquet` (6,240 train ids = the 2,240 plus 4,000 new ids, 2.79x; see the DATA_CARD addendum). VAL and TEST are the identical 480 + 480 source_ids in every row. Nothing is tuned on TEST: TF-IDF picks C on [VAL split] macro-F1 at every point; the CNN uses one fixed config (T9-chosen, fallback: stage-1 best) at every point. One subsample draw per fraction, so the 25%/50% points carry draw-to-draw variance that the TEST CIs (test sampling only) do not include. This varies training-set size within one domain pool; it is not a distribution-shift test.
+
+| model | train set | train ids / rows | selected | [VAL split] acc / macro-F1 % | [TEST split: test] acc / macro-F1 % | TEST acc % [95% CI] (TF-IDF: single fit; CNN: 3-seed ensemble) | McNemar vs 100% (100%-only/point-only correct; exact p; Holm per model) |
+|---|---|---|---|---|---|---|---|
+| TF-IDF+LR | 25% | 560 / 2800 | C=100 | 67.17 / 66.63 | 67.71 / 67.15 | 67.71 [65.71, 69.75] | 288/95; p=1.07e-23; Holm p=3.2e-23 * |
+| TF-IDF+LR | 50% | 1120 / 5600 | C=100 | 72.04 / 71.62 | 71.71 / 71.26 | 71.71 [69.75, 73.58] | 173/76; p=7.21e-10; Holm p=1.44e-09 * |
+| TF-IDF+LR | 100% | 2240 / 11200 | C=100 | 75.62 / 75.28 | 75.75 / 75.48 | 75.75 [73.96, 77.58] | (reference) |
+| TF-IDF+LR | expanded | 6240 / 31200 | C=100 | 80.88 / 80.78 | 79.96 / 79.81 | 79.96 [78.29, 81.62] | 99/200; p=5.29e-09; Holm p=5.29e-09 * |
+
+CNN rows: VAL/TEST columns are mean ± sample std over seeds; the CI is the cluster bootstrap of the seeds' mean-probability ensemble. TF-IDF is one deterministic fit per point.
+
+Figure: `reports/figures/learning_curve.png`.

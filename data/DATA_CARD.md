@@ -95,3 +95,22 @@ mistral-chat 45.5, mpt-chat 23.2 (%). Truncation to 256 tokens therefore affects
 - reviews has only 943 source_ids (still >= 400); text length and style differ by domain.
 - N=400 ids/domain is a subsample of ~1,800 (reviews 943); the subsample is fixed by seed 42.
 - Code is a single domain with short snippets, so RQ3 code transfer also shifts the length distribution.
+
+## Addendum: expanded training set `raid_scaled.parquet` (SECONDARY, beyond spec)
+Used only by the optional data-scaling study (T10, "Secondary: learning curve (beyond spec)" in `reports/results.md`);
+none of the main results use it.
+- Built by `python -m src.make_scaling_data` (seed 42; needs the untracked `data/interim/train_chat_none.parquet`, so the
+  output is tracked in git, 28.3 MB). Same schema and filters as `raid_main.parquet` (attack none, 5 chat models, sampling,
+  repetition_penalty `no`, non-empty generation, paired by source_id).
+- **val and test rows are byte-for-byte the rows of `raid_main.parquet`** (same 480 + 480 source_ids), so results are
+  directly comparable to the main experiments and predictions share the same canonical row order.
+- All 2,240 original train source_ids are kept. NEW source_ids are drawn per domain (one shared `default_rng(42)`, domains
+  in the order abstracts, books, news, poetry, recipes, reddit, reviews, wiki) from the ids of the interim file that have all
+  5 models and that were never used: every id of `raid_main` (train, val, test) and every RQ3 code id is excluded. They are
+  added to **train only**, up to 900 source_ids per domain in total (400 original + 500 new each; reviews has 943 candidate
+  ids, 543 unused, so it also reaches 900). Result: train 6,240 ids / 31,200 rows (6,240 per model; the original train
+  is 2,240, so 2.79x), val 480 / 2,400, test 480 / 2,400; classes exactly balanced in every split.
+- Verified (script asserts, tests in `tests/test_scaling.py`): no new id in val/test or in the old train, every
+  source_id in exactly one split, 5 rows per source_id, (source_id, model) unique.
+- Caveats: the new ids come from the same RAID pool and the same prompt templates, so this tests data quantity, not
+  distribution shift; domain mix of the train set changes slightly (all domains now ~775-800 train ids).

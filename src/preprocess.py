@@ -21,6 +21,20 @@ MIN_LEN = 5  # CNN max kernel size
 _TOKEN_RE = re.compile(r"\r\n|\n|\w+(?:['’]\w+)*|[^\s\w]")
 
 
+# Format normaliser (shared by the neural format-norm ablation and src/analysis/t6_ablate.py).
+_MD_LINE = re.compile(r"^[ \t]*(?:#{1,6}[ \t]+|>[ \t]?|[-*+•][ \t]+|\d+[.)][ \t]+)", re.M)
+_MD_INLINE = re.compile(r"[*_`~]+")
+
+
+def format_normalise(text) -> str:
+    """Strip markdown (heading/quote/bullet/numbered-list markers, emphasis chars), turn every newline into a space and
+    collapse whitespace, so no <NL> token and no list/markdown structure survives."""
+    t = text if isinstance(text, str) else ""
+    t = _MD_LINE.sub("", t)
+    t = _MD_INLINE.sub("", t)
+    return " ".join(t.split())
+
+
 def tokenize(text: str, lowercase: bool = False) -> list[str]:
     """Regex tokenizer. Newlines -> '<NL>' ('\\r\\n' counts as one); words are \\w+ runs with
     internal apostrophes kept ("don't" is one token; a leading/trailing quote is split off);
@@ -117,11 +131,13 @@ class TextDataset(Dataset):
     """Pre-tokenizes + encodes once. __getitem__ -> (ids list, length, label)."""
 
     def __init__(self, df, vocab: Vocab, variant="both", lowercase=False,
-                 max_prompt=64, max_output=256, min_len=MIN_LEN):
+                 max_prompt=64, max_output=256, min_len=MIN_LEN, normalise=False):
         self.variant, self.lowercase = variant, lowercase
+        self.normalise = normalise  # format-normalise the generation (not the prompt) before tokenising
         self.items, self.lengths, self.labels, self.source_ids = [], [], [], []
         self.raw_prompt_len, self.raw_output_len = [], []
         for pr, gen, lab, sid in zip(df["prompt"], df["generation"], df["label"], df["source_id"]):
+            gen = format_normalise(gen) if normalise else gen
             pt, gt = tokenize(_text(pr), lowercase), tokenize(_text(gen), lowercase)
             ids, n = encode_variant(vocab.encode(pt), vocab.encode(gt), variant,
                                     max_prompt, max_output, min_len)
@@ -147,7 +163,7 @@ def collate_fn(batch):
 
 
 def build_vocab_from_df(df_train, lowercase=False, min_freq=2, max_size=30000,
-                        fields=("prompt", "generation")) -> Vocab:
+                        fields=("prompt", "generation"), normalise=False) -> Vocab:
     """Build vocab from the train split's prompt + generation tokens."""
     if "split" in df_train.columns:
         assert (df_train["split"] == "train").all(), "vocab must be built on split == 'train' only"
@@ -155,6 +171,8 @@ def build_vocab_from_df(df_train, lowercase=False, min_freq=2, max_size=30000,
     def gen():
         for f in fields:
             for t in df_train[f]:
+                if normalise and f == "generation":
+                    t = format_normalise(t)
                 yield tokenize(_text(t), lowercase)
 
     return Vocab.build(gen(), min_freq=min_freq, max_size=max_size)

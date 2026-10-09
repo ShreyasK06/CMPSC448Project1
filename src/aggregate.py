@@ -16,6 +16,8 @@ from pathlib import Path
 
 import numpy as np
 
+from src.phase2_spec import is_phase2_tag
+
 PM = "±"
 
 
@@ -66,7 +68,9 @@ def _expand_baseline(rec):
     return out
 
 
-def load(runs, baselines):
+def load(runs, baselines, include_phase2=False):
+    """Phase-2 tags (ablations, base_vp, ext, scale*) are left out of the main table: src.analysis.t8_report gives them
+    their own sections ('Ablations', 'Extended tuning', 'Secondary: learning curve (beyond spec)')."""
     recs = []
     for src, d in (("neural", runs), ("baseline", baselines)):
         for f in sorted(glob.glob(str(Path(d) / "*.json"))):
@@ -82,6 +86,8 @@ def load(runs, baselines):
                 n = _norm(rec, src) if isinstance(rec, dict) else None
                 if n is None or not n["metrics"]:
                     print(f"skip {f}: unrecognised format", file=sys.stderr)
+                    continue
+                if not include_phase2 and is_phase2_tag(n["tag"]):
                     continue
                 recs.append(n)
     return recs
@@ -118,6 +124,16 @@ def to_markdown(recs):
     return "\n".join(lines) + "\n"
 
 
+def merge_preserving(old, table_md):
+    """New main table + every '## ' section of the existing file (appended by the analysis modules) kept verbatim.
+    The main table is the text before the first '## ' heading, so this is idempotent."""
+    if not old:
+        return table_md
+    i = old.find("\n## ")
+    tail = old[i + 1:] if i >= 0 else (old if old.lstrip().startswith("## ") else "")
+    return table_md.rstrip("\n") + "\n\n" + tail if tail else table_md
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", default="runs")
@@ -126,8 +142,10 @@ def main(argv=None):
     a = ap.parse_args(argv)
     md = to_markdown(load(a.runs, a.baselines))
     if a.out:
-        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-        Path(a.out).write_text(md, encoding="utf-8")
+        out = Path(a.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        old = out.read_text(encoding="utf-8") if out.exists() else ""
+        out.write_text(merge_preserving(old, md), encoding="utf-8")
     else:
         sys.stdout.buffer.write(md.encode("utf-8"))
 

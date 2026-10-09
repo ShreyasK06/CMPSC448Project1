@@ -20,13 +20,11 @@ from threadpoolctl import threadpool_limits
 from src import baselines as B
 from src.analysis.common import canon, ci_row, fmt_ci, load_splits, md_table, write_section
 from src.analysis.stats import holm, load_preds, mcnemar_exact
-from src.preprocess import tokenize
+from src.preprocess import format_normalise, tokenize  # noqa: F401  (format_normalise re-exported)
 
 HDR = "## TF-IDF ablations (T6)"
 SELF_ID = [r"\bcohere\b", r"\bas an ai(?: language model)?\b", r"^\s*sure[!,.]?\s+here(?:'s| is| are)?"]
 _SELF_ID_RE = [re.compile(p, re.I | re.M) for p in SELF_ID]
-_MD_LINE = re.compile(r"^[ \t]*(?:#{1,6}[ \t]+|>[ \t]?|[-*+•][ \t]+|\d+[.)][ \t]+)", re.M)
-_MD_INLINE = re.compile(r"[*_`~]+")
 
 
 def mask_self_id(text):
@@ -35,15 +33,6 @@ def mask_self_id(text):
     for r in _SELF_ID_RE:
         t = r.sub(" ", t)
     return t
-
-
-def format_normalise(text):
-    """Strip markdown (heading/quote/bullet/numbered-list markers, emphasis chars), turn every newline into a space and
-    collapse whitespace, so no <NL> token and no list/markdown structure survives."""
-    t = text if isinstance(text, str) else ""
-    t = _MD_LINE.sub("", t)
-    t = _MD_INLINE.sub("", t)
-    return " ".join(t.split())
 
 
 def make_text_fn(name):
