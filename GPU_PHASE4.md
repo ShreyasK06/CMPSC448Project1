@@ -56,3 +56,5 @@ git push origin HEAD
 ```
 
 If the push is rejected: `git pull --rebase`, then push again (the run files have unique names).
+
+> Next (Phase 5, best-vs-best against TF-IDF): see [GPU_PHASE5.md](GPU_PHASE5.md).

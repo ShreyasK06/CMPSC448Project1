@@ -17,7 +17,7 @@ HEADER = "## Output length and tuned config (phase 3-4)"
 RUNS = {
     "output": [("base, cap 256 (reference)", "base"), ("base, cap 512", "abl_len512"), ("base, cap 1024", "abl_len1024"),
                ("base, cap 2048", "abl_len2048"), ("ext, cap 256", "ext"), ("ext, cap 512", "ext_len512"),
-               ("ext, cap 1024", "ext_len1024")],
+               ("ext, cap 1024", "ext_len1024"), ("ext, cap 2048", "ext_len2048")],
     "both": [("base, cap 256 (reference)", "base"), ("ext, cap 256", "ext"), ("ext, cap 512", "ext_len512")],
 }
 HEAD = ["model", "variant", "run", "n seeds", "[VAL split] acc / macro-F1 %", "[TEST split: test] acc / macro-F1 %",
