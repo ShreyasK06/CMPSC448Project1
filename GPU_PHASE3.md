@@ -96,3 +96,5 @@ git push origin HEAD
 ```
 
 If the push is rejected, `git pull --rebase` first (the run files have unique names, so there should be no conflicts).
+
+> Follow-up (Phase 4, confirm the winning config): see [GPU_PHASE4.md](GPU_PHASE4.md).
