@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 
 import numpy as np
-from sklearn.metrics import f1_score
 from threadpoolctl import threadpool_limits
 
 from src import baselines as B

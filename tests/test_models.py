@@ -158,7 +158,6 @@ def test_packed_path_trains_end_to_end_and_device_resolution(tmp_path):
                  cache_dir=str(tmp_path / "c"), runs_dir=None, verbose=False))
     assert r["config"]["device"] == "cpu"
     # packed model on CPU still runs through the same training code path
-    from src.train import evaluate
     m = BiLSTMPacked(V, C, emb=16, hid=16)
     x, l = _mixed_batch()
     assert m(x, l).shape == (x.size(0), C)
