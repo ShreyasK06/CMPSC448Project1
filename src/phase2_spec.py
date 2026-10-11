@@ -24,7 +24,7 @@ SCALE_FRAC_PREFIX = "scalefrac"   # optional extra CNN points: scalefrac25, scal
 SCALED_DATA = "data/processed/raid_scaled.parquet"
 MAIN_DATA = "data/processed/raid_main.parquet"
 # tags that belong to phase 2: excluded from the main table of src.aggregate (they get their own sections)
-PHASE2_TAG_PREFIXES = ("abl_", "base_vp", "ext", "scale")
+PHASE2_TAG_PREFIXES = ("abl_", "base_vp", "ext", "scale", "ho_", "hog_")  # ho_/hog_ = domain-holdout (RQ3) runs
 SEEDS = [0, 1, 2]
 
 # hyper-parameter keys -> train.py flags

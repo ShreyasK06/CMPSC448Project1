@@ -77,3 +77,5 @@ in which case re-run the two report commands above after the pull and commit aga
 
 The question is whether the neural models close the gap to TF-IDF Kfull (78.7% test acc, 78.3% macro-F1) once they see the full output.
 Report VAL and TEST separately. If a cap 2048 setting is better than 512, choose it by mean VAL macro-F1, not by TEST.
+
+> Next (Phase 6, RQ3 leave-one-domain-out for the neural models): see [GPU_PHASE6.md](GPU_PHASE6.md).

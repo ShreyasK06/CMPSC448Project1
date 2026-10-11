@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader
 
 from src.models import build_model
 from src.preprocess import TextDataset, Vocab, build_vocab_from_df, collate_fn
+from src.domain_holdout import HOLDOUT, holdout_splits
 from src.scaling import subsample_ids
 
 N_CLASSES = 5
@@ -32,6 +33,8 @@ DEFAULTS = dict(
     max_out_len=256,      # output-token cap (prompt cap stays 64)
     format_norm=False,    # format-normalise the generation (strip markdown, drop <NL>) before tokenising
     data_fraction=1.0,    # nested seeded fraction of TRAIN source_ids (val/test never touched)
+    holdout_domain=None,  # RQ3: test on every row of this domain, train/val on the seen domains only
+    train_domains=None,   # with holdout_domain: restrict the seen domains (default: all others)
 )
 
 
@@ -53,16 +56,22 @@ def resolve_device(name="auto"):
     return d
 
 
-def _test_names(rq3):
-    return ["test_indomain", "test_code"] if rq3 else ["test"]
+def _test_names(cfg):
+    if cfg.get("holdout_domain"):
+        return [HOLDOUT]
+    return ["test_indomain", "test_code"] if cfg["rq3"] else ["test"]
 
 
 def load_splits(cfg):
     """-> dict name -> dataframe for train, val and all test sets."""
     df = pd.read_parquet(cfg["data"])
+    if cfg.get("holdout_domain"):  # train/val = seen domains only; test_holdout = every row of the held-out domain
+        if cfg.get("data_fraction", 1.0) < 1.0:
+            raise ValueError("--data-fraction cannot be combined with --holdout-domain")
+        return holdout_splits(df, cfg["holdout_domain"], cfg.get("train_domains"))
     col = "split_rq3" if cfg["rq3"] else "split"
     out = {}
-    for n in ["train", "val"] + _test_names(cfg["rq3"]):
+    for n in ["train", "val"] + _test_names(cfg):
         g = df[df[col] == n].reset_index(drop=True)
         if n == "train":
             g = g.assign(split="train")  # vocab guard in build_vocab_from_df checks split == 'train'
@@ -85,6 +94,10 @@ def _cache_path(cfg):
         key += "_fn"
     if cfg.get("data_fraction", 1.0) < 1.0:
         key += f"_fr{cfg['data_fraction']:g}"
+    if cfg.get("holdout_domain"):
+        key += f"_ho{cfg['holdout_domain']}"
+        if cfg.get("train_domains"):
+            key += "_tr" + "-".join(sorted(cfg["train_domains"]))
     return Path(cfg["cache_dir"]) / f"{key}.pkl"
 
 
@@ -199,12 +212,12 @@ def run(config):
     preds = dict(val_y=y, val_pred=p, val_prob=val_prob, val_source_id=np.array(ds["val"].source_ids))
     if cfg["eval_test"]:
         res["test"] = {}
-        for name in _test_names(cfg["rq3"]):
+        for name in _test_names(cfg):
             y, p, pr, _ = evaluate(model, mk(ds[name]), device=device)
             res["test"][name] = metrics(y, p, domains[name])
             preds[f"{name}_y"], preds[f"{name}_pred"], preds[f"{name}_prob"] = y, p, pr
             preds[f"{name}_source_id"] = np.array(ds[name].source_ids)
-        if not cfg["rq3"]:
+        if not cfg["rq3"] and not cfg["holdout_domain"]:
             t = res["test"]["test"]
             res.update(test_acc=t["acc"], test_macro_f1=t["macro_f1"], test_confusion=t["confusion"],
                        test_domain_acc=t["domain_acc"])
@@ -240,6 +253,10 @@ def main(argv=None):
                     help="format-normalise the generation (strip markdown/bullets, collapse whitespace, no <NL>)")
     ap.add_argument("--data-fraction", type=float, default=1.0,
                     help="nested seeded fraction of TRAIN source_ids (val/test unchanged)")
+    ap.add_argument("--holdout-domain", default=None,
+                    help="RQ3: train/val on the other domains, test on EVERY row of this domain (uses raid_main.parquet)")
+    ap.add_argument("--train-domains", nargs="+", default=None,
+                    help="with --holdout-domain: restrict the seen domains (default: all others)")
     ap.add_argument("--tag", default="base")
     ap.add_argument("--max-epochs", type=int, default=20)
     ap.add_argument("--patience", type=int, default=3)
@@ -249,6 +266,10 @@ def main(argv=None):
     ap.add_argument("--threads", type=int, default=8, help="CPU threads (ignored on CUDA)")
     ap.add_argument("--device", default="auto", help="auto (cuda if available else cpu), cpu, cuda, cuda:1")
     a = ap.parse_args(argv)
+    if a.holdout_domain and (a.rq3 or a.data_fraction < 1.0):
+        ap.error("--holdout-domain cannot be combined with --rq3 or --data-fraction")
+    if a.train_domains and not a.holdout_domain:
+        ap.error("--train-domains needs --holdout-domain")
     data = a.data or ("data/processed/raid_rq3.parquet" if a.rq3 else "data/processed/raid_main.parquet")
     for s in a.seeds:
         cfg = dict(model=a.model, variant=a.variant, seed=s, emb=a.emb, hid=a.hid, nf=a.nf, dropout=a.dropout,
@@ -256,7 +277,8 @@ def main(argv=None):
                    eval_test=a.eval_test, tag=a.tag, runs_dir=a.runs_dir,
                    ckpt_dir="checkpoints" if a.save_ckpt else None, threads=a.threads, device=a.device,
                    weight_decay=a.weight_decay, emb_dropout=a.emb_dropout, max_out_len=a.max_out_len,
-                   format_norm=a.format_norm, data_fraction=a.data_fraction)
+                   format_norm=a.format_norm, data_fraction=a.data_fraction,
+                   holdout_domain=a.holdout_domain, train_domains=a.train_domains)
         r = run(cfg)
         msg = f"seed {s}: best_ep={r['best_epoch']} val_acc={r['val_acc']:.4f} val_f1={r['val_macro_f1']:.4f}"
         for n, t in r.get("test", {}).items():
