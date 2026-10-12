@@ -1,4 +1,4 @@
-"""Single source of truth for the phase-2 experiment definitions (run_gpu_phase2.py runs them, t8_report.py reports them).
+"""Single source of truth for the phase-2 experiment definitions (t8_report.py reports them).
 
 Every phase-2 run is variant 'output' unless noted, 3 seeds (0,1,2), --eval-test, hyper-parameters = the stage-1 best of
 reports/tuning/{model}_output.json (the same ones the base runs use) unless noted. Run files: runs/{model}_{variant}_{tag}_s{seed}.json
@@ -18,19 +18,7 @@ ABLATIONS = [
 ]
 BASE_VP_TAG = "base_vp"     # base re-run that also stores val probabilities (replaces nothing)
 EXT_TAG = "ext"             # final runs with the T9-chosen config
-SCALE_TAGS = {"scale100": "100% of the 2,240 train ids (raid_main)",
-              "scaled": "expanded train set (raid_scaled, 6,240 train ids)"}
-SCALE_FRAC_PREFIX = "scalefrac"   # optional extra CNN points: scalefrac25, scalefrac50
-SCALED_DATA = "data/processed/raid_scaled.parquet"
-MAIN_DATA = "data/processed/raid_main.parquet"
-# tags that belong to phase 2: excluded from the main table of src.aggregate (they get their own sections)
 PHASE2_TAG_PREFIXES = ("abl_", "base_vp", "ext", "scale", "ho_", "hog_")  # ho_/hog_ = domain-holdout (RQ3) runs
-SEEDS = [0, 1, 2]
-
-# hyper-parameter keys -> train.py flags
-HP_FLAGS = {"dropout": "--dropout", "nf": "--nf", "emb": "--emb", "hid": "--hid", "weight_decay": "--weight-decay",
-            "emb_dropout": "--emb-dropout"}
 
 
 def is_phase2_tag(tag: str) -> bool:
-    return str(tag).startswith(PHASE2_TAG_PREFIXES)

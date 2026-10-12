@@ -1,0 +1,101 @@
+# Report: attributing LLM text to its generator (RAID)
+
+Answers to the four research questions. Split labels: [VAL split] was used for model selection; [TEST split: test] is the held-out estimate.
+
+Task: identify which of 5 chat LLMs (chatgpt, cohere-chat, llama-chat, mistral-chat, mpt-chat) wrote a RAID text; 8 text domains x 400 source_ids, split 70/15/15 by source_id (train 2,240 / [VAL split] 480 / [TEST split: test] 480 ids; 5 rows per id), chance = 20%. Every number below comes from tables elsewhere in `reports/results.md` or `reports/analysis.md`; the split of each number is labelled. All results are single-split: the only cross-validated number is for TF-IDF (grouped 5-fold). The [VAL split] numbers were used for model selection, so they are not a generalization estimate. Neural "ensemble" figures average the seeds' probabilities and are higher than a single model; TF-IDF is one deterministic fit. McNemar p-values are somewhat optimistic because the 5 rows of a source_id are not independent.
+
+## RQ1. Can we identify which LLM generated a response? (output text as input)
+
+Yes, well above chance. The CNN and BiLSTM both reach 66-73% against 20% chance, but a simple TF-IDF + logistic regression baseline is as good or better.
+
+| model | setting | [VAL split] acc / macro-F1 % | [TEST split: test] acc / macro-F1 % (mean ± sd over seeds) | TEST ensemble acc % [95% CI] |
+|---|---|---|---|---|
+| CNN | spec config, 256-token output cap, 3 seeds | 68.19 ± 0.54 / 68.21 ± 0.45 | 68.24 ± 0.92 / 68.12 ± 0.86 | 71.83 [69.79, 73.83] |
+| BiLSTM | spec config, 256-token output cap, 3 seeds | 65.42 ± 0.45 / 65.51 ± 0.25 | 65.72 ± 0.75 / 65.84 ± 0.57 | 69.42 [67.50, 71.25] |
+| CNN | tuned, 2048-token cap, 5 seeds | 73.35 ± 0.62 / 73.26 ± 0.20 | 72.68 ± 0.61 / 72.49 ± 0.66 | 76.29 [74.46, 78.04] |
+| BiLSTM | tuned, 512-token cap, 5 seeds | 70.15 ± 1.04 / 70.17 ± 1.25 | 70.49 ± 0.87 / 70.41 ± 1.11 | 73.75 [72.04, 75.54] |
+| TF-IDF + LR | 256-token cap | 75.62 / 75.28 | 75.75 / 75.48 | 75.75 [73.96, 77.58] (single fit) |
+| TF-IDF + LR | no truncation | 78.96 / 78.67 | 78.67 / 78.25 | 78.67 [76.96, 80.29] (single fit) |
+
+- Generalization counterpart: TF-IDF grouped 5-fold CV over train+val ids gives 76.24 ± 0.56 accuracy (256-token cap), matching its test 75.75. No cross-validation was run for the neural models, so their only held-out number is the single TEST split above.
+- Both neural models improve substantially when the output is not cut at 256 tokens and with the extended-tuning config chosen on [VAL split] only (about +3 to +4 pp test accuracy of the seed ensemble, Holm-significant). The CNN remains slightly below full-text TF-IDF (Holm p = 0.023) and the BiLSTM clearly below it (p < 1e-8). At the same 256-token cap the tuned CNN ties TF-IDF (p = 0.56).
+- Selection caveat: the 3-seed CNN result at cap 512 (73.1 test macro-F1) dropped to 72.1 once two more seeds were added, so best-of-N choices on few seeds are optimistic.
+- Errors concentrate in mistral-chat <-> mpt-chat (121 of 582 TF-IDF errors); chatgpt, cohere-chat and llama-chat are recalled at 79-88%, mistral-chat 61%, mpt-chat 66%. TEST accuracy by domain (TF-IDF): reviews 89.3, recipes 88.0, poetry 74.2, reddit 71.4, wiki 68.6, news 62.4.
+
+## RQ2. Does the user's prompt help identify the LLM? (prompt only vs output only vs prompt + output)
+
+i) Prompt only: no. TF-IDF and the majority baseline both score exactly 20.00% accuracy (macro-F1 6.67) on [TEST split: test].
+
+ii) Adding the prompt to the output does not reliably help:
+
+| model | output only: test acc % | prompt + output: test acc % | McNemar (output-only / both-only correct; Holm p) |
+|---|---|---|---|
+| TF-IDF | 75.75 | 76.71 | 46 / 69; Holm p = 0.16 |
+| CNN (3-seed ensemble) | 71.83 (per-seed 68.24) | 71.29 (per-seed 68.19) | 160 / 147; Holm p = 0.94 |
+| BiLSTM (3-seed ensemble) | 69.42 (per-seed 65.72) | 70.58 (per-seed 66.35) | 138 / 166; Holm p = 0.36 |
+
+None of the three differences is significant after Holm correction. With the tuned configs at the 512-token cap the point estimates of the 5-seed ensembles are similar (CNN 75.42 output vs 76.04 both; BiLSTM 73.75 vs 73.92); these were not separately tested, and the BiLSTM `both` runs vary a lot between seeds (± 2.5 pp). TF-IDF grouped CV agrees (76.24 ± 0.56 output vs 76.74 ± 0.83 both).
+
+iii) Why prompt-only is at chance: in this dataset the prompt is identical across the 5 models for 100% of source_ids (3,200 of 3,200 text ids; 400 of 400 code ids), so a prompt carries no information about which model answered. This is a property of the data design, not a modelling failure. In a dataset where different models received different prompts (different task mixes or system prompts), a high prompt-only score would be a leakage warning rather than evidence about the model.
+
+## RQ3. Do LLM fingerprints generalize across tasks or domains? (extra credit)
+
+What was run: (a) models trained on all text domains and tested on code (400 held-out code source_ids, 2,000 rows, [TEST split: test_code]); (b) leave-one-text-domain-out: for each of the 8 text domains, train on the other 7 (their train ids), select on those 7 domains' [VAL split] ids, and score on all 400 source_ids (2,000 rows) of the held-out domain (full tables in "Domain holdout (RQ3)" in `reports/results.md`); (c) the brief's grouped example, train on news + wiki + reviews and test on poetry. Hyper-parameters were reused from the all-domains tuning, which saw every domain's validation ids once, so the held-out domains were seen indirectly when configs were chosen. Each fold is a single split.
+
+Leave-one-domain-out headline (mean of 8 held-out-domain accuracies, chance 20%; the in-domain control is the all-domains model on that domain's original test ids, 45-65 ids, so its CIs are wide):
+
+| model | held-out domain acc % (mean of 8) | in-domain control % | mean drop pp | best / worst held-out domain |
+|---|---|---|---|---|
+| TF-IDF (256-token cap) | 42.9 | 76.4 | +32.7 | reviews 58.0 / recipes 23.8 |
+| TF-IDF (no truncation) | 45.7 | 79.2 | +32.8 | reviews 62.5 / recipes 27.3 |
+| CNN (tuned, 3-seed ensemble) | 39.9 | 76.1 | +35.1 | reviews 63.1 / recipes 20.0 |
+| BiLSTM (tuned, 3-seed ensemble) | 39.3 | 73.5 | +32.9 | reviews 59.4 / recipes 18.9 |
+
+a) Fingerprints transfer only partly. Every model keeps some signal on an unseen domain (reviews 58-63%, news 45-56%, books 46-54%), but loses about 33-35 pp on average compared with in-domain, and the loss is far larger for recipes (drop +61 to +72 pp; CNN and BiLSTM sit at chance, 20.0% and 18.9%, sending 98-99% of rows to one class; TF-IDF 24-27%, 88-89% to one class). A high `top pred %` means the model collapsed to one label rather than transferred.
+
+b) Neural models do not generalize better than the linear baseline: TF-IDF (no truncation) 45.7% vs CNN 39.9% and BiLSTM 39.3%. The neural models are worse on poetry (25.8 / 28.3% against 35-39% for TF-IDF) and collapse more often (mean top-prediction share 58-59% against 49-50%). These are per-domain single splits, not a cross-validated estimate.
+
+c) Which LLMs survive the shift: cohere-chat is the easiest (mean recall 77-87% across models), while llama-chat, mistral-chat and mpt-chat average only 19-43%, 22-29% and 20-27%. Per-class recall ranges 0-100% across folds, so one class often absorbs a whole domain.
+
+d) Grouped example (news + wiki + reviews -> poetry): 20.8-23.8% for all four models, with 91-98% of rows in one class. That is worse than the 7-domain leave-poetry-out fold (25.8-38.6%), so more diverse training domains help.
+
+Text to code (trained on all text domains, tested on code) is the extreme case:
+
+i) Performance collapses on the unseen task: TF-IDF 19.55%, CNN 20.02 ± 0.42, BiLSTM 20.02 ± 0.33 (chance 20%), versus 66-76% on in-domain text.
+
+ii) No model is more identifiable on code: for every true class, 94.5-98% of predictions are cohere-chat (all models; a length/format-only stylometry model collapses the same way, 93.8%). Across the text domains, TF-IDF accuracy varies from 62.4% (news) to 89.3% (reviews) in-domain; that is within-domain variation, not transfer.
+
+iii) The learned signal is largely task-specific, not a general fingerprint, at least for this text-to-code shift. Code outputs differ in length (28-37 words vs 162-279 for text), almost never hit the 256-token cap, and 13.9% of their tokens are out-of-vocabulary versus 2.9% for held-out text. The ceiling shows code is attributable in principle: TF-IDF trained and cross-validated on code only reaches 49.40 ± 2.27% (grouped 5-fold over 400 ids, chance 20%, with only 320 training ids per fold). Limits: code is one domain with short snippets, so length/format shift is confounded with domain shift, and we did not separate them.
+
+## RQ4. What characteristics distinguish the LLMs? (extra credit)
+
+i) What signals does the classifier use? Both structural and lexical. Length and formatting alone are informative, but lexical content carries most of the signal:
+
+| features (output text) | [TEST split: test] acc % [95% CI] |
+|---|---|
+| length only, logistic regression | 37.71 [36.29, 39.25] |
+| length only, gradient boosting | 51.88 [50.12, 53.67] |
+| 22 stylometric features (length, newlines, bullets, markdown, type-token ratio, punctuation, ...), gradient boosting | 65.25 [63.33, 67.08] |
+| TF-IDF word 1-2grams (256-token cap) | 75.75 [73.96, 77.58] |
+
+ii) Structural vs linguistic: on a test subset where every class has the same length distribution (820 rows), length-only gradient boosting drops 51.9 -> 39.4 and stylometry 65.3 -> 60.2, while TF-IDF drops only 75.8 -> 74.4 (CNN 71.8 -> 70.4). So length explains a large part of the shallow models' accuracy but little of TF-IDF's. Length differs strongly by model (mean 162 words for mpt-chat vs 279 for llama-chat; 87% of llama-chat outputs hit the 256-token cap against 27% for mpt-chat). The most informative n-grams are a mix of boilerplate (cohere "Here is", llama "Sure", "Here's") and content/phrasing words; only about 1-9 of each class's top-30 features are formatting or boilerplate. Lexical diversity was tested with length-robust measures (moving-average TTR over 50-word windows, TTR and hapax share of the first 100 words): alone they reach 30.25% [28.58, 31.83] (28.2% on the length-matched subset, chance 20%), and adding them to the 22 features moves test accuracy from 65.25 to 65.83 (CIs overlap; length-matched 60.51 -> 60.65). Dropping them changes nothing and shuffling them costs 3.1 pp, so diversity is a weak, mostly redundant cue.
+
+iii) Does removing signals reduce performance? Removing surface cues barely matters, while removing text does (TF-IDF, [TEST split: test]):
+
+| change to the input | test acc % | vs base (Holm) |
+|---|---|---|
+| base (256 tokens) | 75.75 | (base) |
+| lowercase | 75.62 | p = 1 |
+| strip markdown/bullets, drop newline tokens | 76.21 | p = 1 |
+| mask "Cohere", "as an AI", "Sure! Here..." | 75.96 | p = 1 |
+| keep first 32 / 64 / 128 tokens | 55.46 / 59.71 / 69.83 | all significant |
+| keep all tokens | 78.67 | significant (+2.9 pp) |
+
+Neural ablations agree: CNN lowercase -0.08 pp and format-normalised input -1.38 pp (neither significant); BiLSTM lowercase -2.46 pp (Holm p = 0.018), the one significant surface effect. The largest effect in the whole study is the amount of output text the model sees. Correlational caveat: these ablations show what the classifiers can do without a cue, not which cue a given prediction relied on. The next part adds interventions on a trained model.
+
+iv) Feature groups and deletion tests (new in Phase 6; [TEST split: test]).
+
+- Feature groups (gradient boosting, 22 stylometric + 3 diversity features, 65.83% with all 25): layout (newlines, bullets, markdown, line counts) alone gives 52.54% [50.62, 54.37], and removing it costs the most, to 61.00% (-4.8 pp); removing punctuation costs -2.5 pp, lexical -1.9 pp, opening/ending -1.8 pp, and removing length costs only 0.5 pp (65.29). Length alone gives 41.58% but falls to 25.21% on the length-matched subset, whereas layout alone keeps 43.72% there, so layout is the structural cue that survives length control. Group permutation importance ranks length (20.2 pp) and layout (19.8 pp) first, but these overlap, so the 'minus' rows above are the safer reading.
+- Deleting formatting from the CNN's inputs (tuned CNN, 3-seed ensemble, intact accuracy 72.54%): deleting newline tokens changes 79% of rows and lowers accuracy by 12.29 pp [-13.75, -10.79] (to 60.25%) and the true-class probability by 9.81 pp, against -2.75 pp for deleting the last 32 tokens and -5.58 pp for deleting 32 random tokens. The effect is concentrated in llama-chat (true-class probability -43 pp) and mistral-chat (-15 pp); chatgpt and mpt-chat gain slightly (+6 pp). So the CNN relies on line structure, mainly to recognise llama-chat. Markdown marker tokens (-0.46 pp accuracy) and boilerplate openers (-0.29 pp) matter very little, and they change only 4-5% of rows.
+- Deleting the first 32 tokens lowers accuracy by 5.42 pp [-6.92, -3.92], the same as deleting 32 random tokens (-5.58) and more than the last 32 (-2.75). The first tokens are therefore not special beyond ordinary text loss, apart from a mild position effect.
+- Limits: these tests describe what this CNN relies on (one architecture, three seeds, 256-token cap), not what distinguishes the LLMs in general; deleting tokens shifts the remaining positions and creates unnatural text; the feature-group results are a single HGB fit per set.

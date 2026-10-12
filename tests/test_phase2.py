@@ -1,5 +1,5 @@
 """Tests for the phase-2 tooling: ext grids/selection, train flags (val probs, caps, cache key, fractions), aggregate merge,
-report helpers and the run_gpu_phase2 command builders."""
+report helpers ."""
 import json
 import pickle
 
@@ -182,13 +182,3 @@ def test_ablation_section_end_to_end_on_tiny_runs(tmp_path):
                     fig_dir=str(tmp_path / "f"))
     txt = out.read_text()
     assert txt.count("## Ablations") == 1 and "## Keep me" in txt and txt.startswith("TABLE")
-
-
-# ---------------------------------------------------------------- run_gpu_phase2 builders
-def test_phase2_command_builders():
-    import run_gpu_phase2 as P
-    assert P.hp_flags({"dropout": 0.3, "nf": 200, "emb": 256, "weight_decay": 0.0001}) == [
-        "--dropout", "0.3", "--nf", "200", "--emb", "256", "--weight-decay", "0.0001"]
-    a = P.train_args("cnn", "output", 1, "abl_len64", ["--nf", "8"], "runs", 20, ["--device", "cpu"], ["--max-out-len", "64"])
-    assert a[:2] == ["-m", "src.train"] and "--eval-test" in a and a[a.index("--tag") + 1] == "abl_len64"
-    assert a[a.index("--max-out-len") + 1] == "64" and a[a.index("--seeds") + 1] == "1"

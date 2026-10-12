@@ -7,7 +7,7 @@ Split rules (no leakage):
 Vocabulary / TF-IDF vocabulary are fit on the seen-domain train rows only. Hyper-parameters are reused, not re-tuned.
 
 TF-IDF runner (CPU):  python -m src.domain_holdout [--domains news ...] [--no-truncate] [--train-domains a b c --domains poetry]
-Neural runs use `python -m src.train --holdout-domain DOMAIN` (see GPU_PHASE6.md).
+Neural runs use `python -m src.train --holdout-domain DOMAIN`.
 """
 from __future__ import annotations
 
