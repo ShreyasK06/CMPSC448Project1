@@ -20,7 +20,6 @@ from torch.utils.data import DataLoader
 from src.models import build_model
 from src.preprocess import TextDataset, Vocab, build_vocab_from_df, collate_fn
 from src.domain_holdout import HOLDOUT, holdout_splits
-from src.scaling import subsample_ids
 
 N_CLASSES = 5
 DEFAULTS = dict(
@@ -32,7 +31,6 @@ DEFAULTS = dict(
     emb_dropout=0.0,      # dropout on the embedding output (0 = off, bit-identical to older runs)
     max_out_len=256,      # output-token cap (prompt cap stays 64)
     format_norm=False,    # format-normalise the generation (strip markdown, drop <NL>) before tokenising
-    data_fraction=1.0,    # nested seeded fraction of TRAIN source_ids (val/test never touched)
     holdout_domain=None,  # RQ3: test on every row of this domain, train/val on the seen domains only
     train_domains=None,   # with holdout_domain: restrict the seen domains (default: all others)
 )
@@ -66,8 +64,6 @@ def load_splits(cfg):
     """-> dict name -> dataframe for train, val and all test sets."""
     df = pd.read_parquet(cfg["data"])
     if cfg.get("holdout_domain"):  # train/val = seen domains only; test_holdout = every row of the held-out domain
-        if cfg.get("data_fraction", 1.0) < 1.0:
-            raise ValueError("--data-fraction cannot be combined with --holdout-domain")
         return holdout_splits(df, cfg["holdout_domain"], cfg.get("train_domains"))
     col = "split_rq3" if cfg["rq3"] else "split"
     out = {}
@@ -75,9 +71,6 @@ def load_splits(cfg):
         g = df[df[col] == n].reset_index(drop=True)
         if n == "train":
             g = g.assign(split="train")  # vocab guard in build_vocab_from_df checks split == 'train'
-            if cfg.get("data_fraction", 1.0) < 1.0:
-                keep = set(subsample_ids(g["source_id"].unique(), cfg["data_fraction"]))
-                g = g[g["source_id"].astype(str).isin(keep)].reset_index(drop=True)
         out[n] = g
     return out
 
@@ -92,8 +85,6 @@ def _cache_path(cfg):
         key += f"_mo{cfg['max_out_len']}"
     if cfg.get("format_norm"):
         key += "_fn"
-    if cfg.get("data_fraction", 1.0) < 1.0:
-        key += f"_fr{cfg['data_fraction']:g}"
     if cfg.get("holdout_domain"):
         key += f"_ho{cfg['holdout_domain']}"
         if cfg.get("train_domains"):
@@ -251,8 +242,6 @@ def main(argv=None):
     ap.add_argument("--max-out-len", type=int, default=256, help="output-token cap (default 256; cache key includes it)")
     ap.add_argument("--format-norm", action="store_true",
                     help="format-normalise the generation (strip markdown/bullets, collapse whitespace, no <NL>)")
-    ap.add_argument("--data-fraction", type=float, default=1.0,
-                    help="nested seeded fraction of TRAIN source_ids (val/test unchanged)")
     ap.add_argument("--holdout-domain", default=None,
                     help="RQ3: train/val on the other domains, test on EVERY row of this domain (uses raid_main.parquet)")
     ap.add_argument("--train-domains", nargs="+", default=None,
@@ -266,8 +255,8 @@ def main(argv=None):
     ap.add_argument("--threads", type=int, default=8, help="CPU threads (ignored on CUDA)")
     ap.add_argument("--device", default="auto", help="auto (cuda if available else cpu), cpu, cuda, cuda:1")
     a = ap.parse_args(argv)
-    if a.holdout_domain and (a.rq3 or a.data_fraction < 1.0):
-        ap.error("--holdout-domain cannot be combined with --rq3 or --data-fraction")
+    if a.holdout_domain and a.rq3:
+        ap.error("--holdout-domain cannot be combined with --rq3")
     if a.train_domains and not a.holdout_domain:
         ap.error("--train-domains needs --holdout-domain")
     data = a.data or ("data/processed/raid_rq3.parquet" if a.rq3 else "data/processed/raid_main.parquet")
@@ -277,7 +266,7 @@ def main(argv=None):
                    eval_test=a.eval_test, tag=a.tag, runs_dir=a.runs_dir,
                    ckpt_dir="checkpoints" if a.save_ckpt else None, threads=a.threads, device=a.device,
                    weight_decay=a.weight_decay, emb_dropout=a.emb_dropout, max_out_len=a.max_out_len,
-                   format_norm=a.format_norm, data_fraction=a.data_fraction,
+                   format_norm=a.format_norm,
                    holdout_domain=a.holdout_domain, train_domains=a.train_domains)
         r = run(cfg)
         msg = f"seed {s}: best_ep={r['best_epoch']} val_acc={r['val_acc']:.4f} val_f1={r['val_macro_f1']:.4f}"

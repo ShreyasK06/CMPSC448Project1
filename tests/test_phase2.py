@@ -12,7 +12,7 @@ from src.analysis import t8_report as R
 from src.analysis.stats import bootstrap_weights, cluster_confusions
 from src.models import build_model
 from src.phase2_spec import ABLATIONS, is_phase2_tag
-from src.train import DEFAULTS, _cache_path, load_splits, run
+from src.train import DEFAULTS, _cache_path, run
 from src.tune import ext_grid, select_best
 from tests.synthetic import make_synthetic_df
 
@@ -54,10 +54,9 @@ def test_cache_key_includes_new_options_and_keeps_old_key(tmp_path):
     cfg, _ = _cfg(tmp_path)
     full = {**DEFAULTS, **cfg}
     base = _cache_path(full)
-    assert "_mo" not in base.name and "_fn" not in base.name and "_fr" not in base.name  # historical key unchanged
+    assert "_mo" not in base.name and "_fn" not in base.name  # historical key unchanged
     assert "_mo64" in _cache_path({**full, "max_out_len": 64}).name
     assert _cache_path({**full, "format_norm": True}) != base
-    assert _cache_path({**full, "data_fraction": 0.5}) != base
     assert _cache_path({**full, "max_out_len": 64}) != _cache_path({**full, "max_out_len": 128})
 
 
@@ -82,21 +81,9 @@ def test_max_out_len_and_format_norm_change_encoded_lengths(tmp_path):
     assert len(list((tmp_path / "c").glob("*.pkl"))) == 2
 
 
-def test_data_fraction_subsamples_train_only_and_nested(tmp_path):
-    cfg, _ = _cfg(tmp_path)
-    full = {**DEFAULTS, **cfg}
-    s100, s50, s25 = (load_splits({**full, "data_fraction": f}) for f in (1.0, 0.5, 0.25))
-    t100, t50, t25 = (set(s["train"].source_id) for s in (s100, s50, s25))
-    assert t25 < t50 < t100
-    for s in (s50, s25):
-        assert set(s["val"].source_id) == set(s100["val"].source_id)
-        assert set(s["test"].source_id) == set(s100["test"].source_id)
-    assert not t50 & (set(s50["val"].source_id) | set(s50["test"].source_id))
-
-
 # ---------------------------------------------------------------- aggregate
 def test_phase2_tag_detection():
-    assert all(is_phase2_tag(t) for t in ("abl_lc", "base_vp", "ext", "scaled", "scale100", "scalefrac25"))
+    assert all(is_phase2_tag(t) for t in ("abl_lc", "base_vp", "ext"))
     assert not any(is_phase2_tag(t) for t in ("base", "rq3"))
     assert all(is_phase2_tag(t) for _, t, _, _ in ABLATIONS)
 
@@ -158,7 +145,6 @@ def test_pm_and_fill_mcnemar_holm():
 def test_sections_skip_when_no_runs(tmp_path):
     assert R.section_ablations(str(tmp_path)) is None
     assert R.section_ext(str(tmp_path), str(tmp_path)) is None
-    assert R.section_scaling(str(tmp_path), str(tmp_path)) is None
 
 
 def test_ablation_section_end_to_end_on_tiny_runs(tmp_path):
@@ -178,7 +164,6 @@ def test_ablation_section_end_to_end_on_tiny_runs(tmp_path):
     out = tmp_path / "results.md"
     out.write_text("TABLE\n\n## Keep me\nx\n")
     for _ in range(2):  # idempotent
-        R.write_all(str(runs), str(tmp_path / "t"), str(tmp_path / "b"), str(out), str(tmp_path / "an.md"),
-                    fig_dir=str(tmp_path / "f"))
+        R.write_all(str(runs), str(tmp_path / "t"), str(out), str(tmp_path / "an.md"))
     txt = out.read_text()
     assert txt.count("## Ablations") == 1 and "## Keep me" in txt and txt.startswith("TABLE")

@@ -61,8 +61,6 @@ def test_train_load_splits_and_cache_keys(tmp_path):
     k3 = _cache_path({**cfg, "train_domains": ["a", "c"]})
     k0 = _cache_path({**DEFAULTS, "data": str(p)})
     assert len({k0, k1, k2, k3}) == 4
-    with pytest.raises(ValueError):
-        load_splits({**cfg, "data_fraction": 0.5})
 
 
 def test_holdout_tags_excluded_from_main_table():

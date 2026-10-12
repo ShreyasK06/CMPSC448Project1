@@ -4,7 +4,7 @@ CMPSC 448 Project 1. Given a response from one of five chat models, can a classi
 
 **Classes:** `chatgpt`, `cohere-chat`, `llama-chat`, `mistral-chat`, `mpt-chat` (chance = 20%).
 **Models:** TF-IDF + logistic regression (baseline), TextCNN, BiLSTM (PyTorch).
-**Data:** 8 text domains (abstracts, books, news, poetry, recipes, reddit, reviews, wiki) with 400 source prompts each, plus a held-out code domain. Splits are 70/15/15 by source prompt, so the 5 responses to one prompt never straddle train and test. See `data/DATA_CARD.md`.
+**Data:** 8 text domains (abstracts, books, news, poetry, recipes, reddit, reviews, wiki) with 400 source prompts each, plus a held-out code domain. Splits are 70/15/15 by source prompt, so the 5 responses to one prompt never straddle train and test.
 
 ## Headline results
 
@@ -32,14 +32,13 @@ src/
   baselines.py                   majority and TF-IDF + LR baselines
   train.py, tune.py              neural training (multi-seed, early stopping on VAL) and hyper-parameter search
   domain_holdout.py              leave-one-domain-out TF-IDF runs
-  scaling.py, make_scaling_data.py   data-scaling study
   aggregate.py                   run files -> results tables
   analysis/                      statistics, error analysis, ablations, length controls, domain holdout,
                                  feature groups, occlusion
 tests/                           pytest suite
 data/processed/                  processed parquet files and vocabulary (tracked)
 runs/                            per-seed metrics (.json) and test predictions (.npz)
-reports/                         generated results, tuning configs, baselines, figures
+reports/                         generated results, tuning configs and baselines
 ```
 
 ## Setup

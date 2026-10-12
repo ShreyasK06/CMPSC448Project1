@@ -1,9 +1,8 @@
-"""Phase-2 report sections (T8 ablations, T9 extended tuning, T10 learning curve) for reports/results.md + analysis.md.
+"""Phase-2 report sections (T8 ablations, T9 extended tuning) for reports/results.md + analysis.md.
 
 Sections written (idempotent, replaced in place; nothing else in the files is touched):
   '## Ablations'                                  neural ablations vs the base runs  (T8)
   '## Extended tuning'                            T9 grid (VAL only) + final 'ext' runs vs base
-  '## Secondary: learning curve (beyond spec)'    T10 TF-IDF curve + CNN at 100% / expanded
 
 Every table says which split each number comes from. Neural rows: mean +/- std (ddof=1) over seeds and a 3-seed mean-prob
 ensemble with a cluster-bootstrap CI over test source_ids; comparisons vs base use the exact McNemar test on the ensemble
@@ -26,7 +25,6 @@ from src.phase2_spec import ABLATIONS, BASE_VP_TAG, EXT_TAG
 
 H_ABL = "## Ablations"
 H_EXT = "## Extended tuning"
-H_SCALE = "## Secondary: learning curve (beyond spec)"
 PM = "±"
 N_BOOT = 2000
 
@@ -241,97 +239,11 @@ def section_ext(runs="runs", tuning="reports/tuning", base_runs=None):
     return "\n".join(L)
 
 
-# ----------------------------------------------------------------- T10
-CNN_POINTS = [("scalefrac25", "25%", 560), ("scalefrac50", "50%", 1120), ("scale100", "100%", 2240),
-              ("scaled", "expanded", 6240)]
-
-
-def section_scaling(runs="runs", baselines="reports/baselines", fig_dir="reports/figures"):
-    jp = Path(baselines) / "scaling_tfidf.json"
-    tf = json.loads(jp.read_text(encoding="utf-8")) if jp.exists() else None
-    cnn = {tag: load_group(runs, "cnn", "output", tag) for tag, _, _ in CNN_POINTS}
-    cnn = {t: g for t, g in cnn.items() if g}
-    if tf is None and not cnn:
-        return None
-    L = [H_SCALE, "",
-         "**Secondary / beyond the project spec.** Does more training data help? Train subsets are nested seeded subsamples "
-         "(seed 42) of the 2,240 train source_ids of `raid_main`; `expanded` = `data/processed/raid_scaled.parquet` (6,240 train "
-         "ids = the 2,240 plus 4,000 new ids, 2.79x; see the DATA_CARD addendum). VAL and TEST are the identical 480 + 480 "
-         "source_ids in every row. Nothing is tuned on TEST: TF-IDF picks C on [VAL split] macro-F1 at every point; the CNN uses "
-         "one fixed config (T9-chosen, fallback: stage-1 best) at every point. One subsample draw per fraction, so the 25%/50% "
-         "points carry draw-to-draw variance that the TEST CIs (test sampling only) do not include. This varies training-set size "
-         "within one domain pool; it is not a distribution-shift test.", ""]
-    rows, pts = [], []
-    if tf:
-        mc = tf.get("mcnemar_vs_100pct", {})
-        for nm, p in tf["points"].items():
-            m_ = mc.get(nm)
-            cell = "(reference)" if nm == "100%" else (
-                f"{m_['base_only']}/{m_['other_only']}; p={m_['p']:.3g}; Holm p={m_['holm_p']:.3g}{' *' if m_.get('reject') else ''}"
-                if m_ else "-")
-            rows.append(["TF-IDF+LR", nm, f"{p['n_train_ids']} / {p['n_train_rows']}", f"C={p['C']:g}",
-                         f"{100 * p['val_acc']:.2f} / {100 * p['val_macro_f1']:.2f}",
-                         f"{100 * p['test_acc']:.2f} / {100 * p['test_macro_f1']:.2f}",
-                         fmt_ci(p["test_acc"], p["test_acc_ci"]), cell])
-            pts.append(("tfidf", p["n_train_ids"], p["test_acc"], p["test_acc_ci"]))
-    ens = {t: ensemble(g) for t, g in cnn.items()}
-    ref = ens.get("scale100")
-    crow = []
-    for tag, nm, n_ids in CNN_POINTS:
-        if tag not in cnn:
-            continue
-        s = summarise(cnn[tag])
-        acc_ci, _ = _ci_cells(ens[tag])
-        mc = None
-        if tag != "scale100" and ref is not None and ens[tag] is not None:
-            mc = compare(ref, ens[tag])
-        crow.append(["CNN (fixed config)", nm, f"{n_ids} / {n_ids * 5}", f"{len(cnn[tag])} seeds", s["val"], s["test"], acc_ci, mc])
-        accs = [g["res"]["test_acc"] for g in cnn[tag] if "test_acc" in g["res"]]
-        if accs:
-            sd = float(np.std(accs, ddof=1)) if len(accs) > 1 else 0.0
-            pts.append(("cnn", n_ids, float(np.mean(accs)), (float(np.mean(accs)) - sd, float(np.mean(accs)) + sd)))
-    _fill_mcnemar(crow, 7)
-    rows += crow
-    L += md_table(["model", "train set", "train ids / rows", "selected", "[VAL split] acc / macro-F1 %",
-                   "[TEST split: test] acc / macro-F1 %",
-                   "TEST acc % [95% CI] (TF-IDF: single fit; CNN: 3-seed ensemble)",
-                   "McNemar vs 100% (100%-only/point-only correct; exact p; Holm per model)"], rows) + [""]
-    L += ["CNN rows: VAL/TEST columns are mean ± sample std over seeds; the CI is the cluster bootstrap of the seeds' "
-          "mean-probability ensemble. TF-IDF is one deterministic fit per point.", ""]
-    if pts:
-        try:
-            import matplotlib
-            matplotlib.use("Agg")
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots(figsize=(5.8, 3.8))
-            for kind, lab, mk in (("tfidf", "TF-IDF+LR (95% bootstrap CI)", "o-"), ("cnn", "CNN (mean ± std over seeds)", "s--")):
-                P = sorted(p for p in pts if p[0] == kind)
-                if P:
-                    ax.errorbar([p[1] for p in P], [100 * p[2] for p in P],
-                                yerr=[[100 * (p[2] - p[3][0]) for p in P], [100 * (p[3][1] - p[2]) for p in P]],
-                                fmt=mk, capsize=3, label=lab)
-            ax.set_xscale("log")
-            ax.set_xlabel("train source_ids (log)")
-            ax.set_ylabel("TEST accuracy %")
-            ax.set_title("Learning curve (secondary, beyond spec)")
-            ax.grid(alpha=0.3)
-            ax.legend(fontsize=8)
-            fig.tight_layout()
-            Path(fig_dir).mkdir(parents=True, exist_ok=True)
-            fig.savefig(Path(fig_dir) / "learning_curve.png", dpi=150)
-            plt.close(fig)
-            L += ["Figure: `reports/figures/learning_curve.png`.", ""]
-        except Exception as e:  # plotting is optional
-            L += [f"(figure skipped: {e})", ""]
-    return "\n".join(L)
-
-
 # ----------------------------------------------------------------- driver
-def write_all(runs="runs", tuning="reports/tuning", baselines="reports/baselines", results_md="reports/results.md",
-              analysis_md="reports/analysis.md", base_runs=None, fig_dir="reports/figures"):
+def write_all(runs="runs", tuning="reports/tuning", results_md="reports/results.md",
+              analysis_md="reports/analysis.md", base_runs=None):
     done = []
-    for hdr, body in ((H_ABL, section_ablations(runs, base_runs)), (H_EXT, section_ext(runs, tuning, base_runs)),
-                      (H_SCALE, section_scaling(runs, baselines, fig_dir))):
+    for hdr, body in ((H_ABL, section_ablations(runs, base_runs)), (H_EXT, section_ext(runs, tuning, base_runs))):
         if body is None:
             print(f"[skip] {hdr}: no runs yet")
             continue
@@ -346,12 +258,10 @@ def main(argv=None):
     ap.add_argument("--runs", default="runs")
     ap.add_argument("--base-runs", default=None, help="where the base-tag runs live (default: --runs)")
     ap.add_argument("--tuning", default="reports/tuning")
-    ap.add_argument("--baselines", default="reports/baselines")
     ap.add_argument("--results", default="reports/results.md")
     ap.add_argument("--analysis", default="reports/analysis.md")
-    ap.add_argument("--fig-dir", default="reports/figures")
     a = ap.parse_args(argv)
-    write_all(a.runs, a.tuning, a.baselines, a.results, a.analysis, a.base_runs, a.fig_dir)
+    write_all(a.runs, a.tuning, a.results, a.analysis, a.base_runs)
 
 
 if __name__ == "__main__":

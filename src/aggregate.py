@@ -69,7 +69,7 @@ def _expand_baseline(rec):
 
 
 def load(runs, baselines, include_phase2=False):
-    """Phase-2 tags (ablations, base_vp, ext, scale*) are left out of the main table: src.analysis.t8_report gives them
+    """Phase-2 tags (ablations, base_vp, ext, ho_*, hog_*) are left out of the main table: src.analysis.t8_report gives them
     their own sections ('Ablations', 'Extended tuning', 'Secondary: learning curve (beyond spec)')."""
     recs = []
     for src, d in (("neural", runs), ("baseline", baselines)):
