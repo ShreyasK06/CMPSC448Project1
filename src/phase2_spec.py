@@ -18,7 +18,11 @@ ABLATIONS = [
 ]
 BASE_VP_TAG = "base_vp"     # base re-run that also stores val probabilities (replaces nothing)
 EXT_TAG = "ext"             # final runs with the T9-chosen config
+SCALED_DATA = "data/processed/raid_scaled.parquet"
+MAIN_DATA = "data/processed/raid_main.parquet"
+# tags that belong to phase 2: excluded from the main table of src.aggregate (they get their own sections)
 PHASE2_TAG_PREFIXES = ("abl_", "base_vp", "ext", "scale", "ho_", "hog_")  # ho_/hog_ = domain-holdout (RQ3) runs
 
 
 def is_phase2_tag(tag: str) -> bool:
+    return str(tag).startswith(PHASE2_TAG_PREFIXES)
