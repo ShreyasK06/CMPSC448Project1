@@ -11,5 +11,5 @@ checkpoints/
 .pytest_cache/
 logs/
 quick_out/
-quick_out/
-
+.claude/
+MEMORY.md
